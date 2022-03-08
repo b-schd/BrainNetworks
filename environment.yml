@@ -1,0 +1,16 @@
+name: sync-brain-networks
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.6
+  - openmeeg
+  - spyder=4.1.5
+  - pyqt=5.9.2
+  - h5py
+  - scipy
+  - scikit-learn
+  - numba
+  - matplotlib
+  - statsmodels
+prefix: /Users/bscheid/opt/anaconda3/envs/sync-brain-networks

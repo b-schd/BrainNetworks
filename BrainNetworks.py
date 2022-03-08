@@ -4,6 +4,7 @@ import h5py
 from scipy.integrate import odeint
 import scipy as sp
 import numpy as np
+import json
 from features import synchronizationLikelihood
 import cmath
 import matplotlib.pyplot as plt
@@ -108,19 +109,26 @@ def get_timescale_max_data(A_list, nat_freqs, alpha, dt, steps):
         maxes.append(max)
     return np.array(syncs), np.array(maxes), np.array(means), np.array(times)
 
+def cell_strings_from_hdf5(f, key):
+    ref = f[key][:]
+    strlist = [u''.join(chr(c) for c in f[ref[0][obj_ref]]) for obj_ref in range(ref.shape[1])] 
+    return strlist
+
 
 def preprocessed_tseries(series, fs, band = [15, 30]):
-    clean_tseries = np.array(series)
+    clean_tseries = np.array(series)    
     clean_tseries -= np.mean(clean_tseries, axis = 0)
     if band is not None:
         clean_tseries = butter_bandpass_filter(clean_tseries, band[0], band[1], fs)
     return clean_tseries
 
-def get_tseries_and_fs(f, band = [15,30], series_idx = None):
+def get_tseries_and_fs(f, band = [15,30], chan_ignore= None, chan_keep= None, series_idx = None):
     '''
     Can be used for the full ecog data dataSets_clean.mat or an individual SEEG file like HUP131-short-ictal-block-1.mat.
     :param f: the h5py file object
     :param band: the desired band (for ex: use [15,30] for beta band. If no specific band, set to None
+    :param chan_ignore: array of channels to ignore. If used, input to chan_keep will be ignored
+    :param chan_keep: array of channels to keep. Will be ignored if chan_ignore used. 
     :param series_idx: Set series_idx to the desired index if used for the full ecog data (otherwise leave as None)
     :return: (N,T) processed timeseries, as well as sampling frequency Fs
     '''
@@ -128,18 +136,33 @@ def get_tseries_and_fs(f, band = [15,30], series_idx = None):
         refs = f['dataSets_clean']['data']
         refs_sample_freq = f['dataSets_clean']['Fs']
         fs = int(f[refs_sample_freq[series_idx][0]][()][0][0])
-
+        
         tseries = f[refs[series_idx][0]][()].T
+        channels = cell_strings_from_hdf5(f, 'channels')
+        
         tseries = preprocessed_tseries(tseries, fs, band = band)
         return tseries, fs
     else:       #assuming an individual SEEG file
         fs = int(f['Fs'][()][0][0])
         tseries = f['evData'][()].T
+        
+        if chan_ignore:
+            channels = cell_strings_from_hdf5(f, 'channels')
+            toKeep = [i not in chan_ignore for i in channels]
+            # TODO: make sure channels in EEG files match channel name in data file
+            tseries = tseries[toKeep]
+            
+        elif chan_keep:
+            channels = cell_strings_from_hdf5(f, 'channels')
+            toKeep = [i in chan_keep for i in channels]
+            # TODO: make sure channels in EEG files match channel name in data file
+            tseries = tseries[toKeep]
+        
         tseries = preprocessed_tseries(tseries, fs, band=band)
     return tseries, fs
 
 
-def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, series_idx = None, name = ""):
+def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=None,chan_keep=None, series_idx = None, name = ""):
     '''
     Can be used for the full ecog data dataSets_clean.mat or an individual SEEG file like HUP131-short-ictal-block-1.mat.
     Constructs networks for all 1-second intervals, and saves the result to a pickle file. To load, use something like
@@ -151,7 +174,7 @@ def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, series_idx =
     :param name: anything you would like to add to the saved filename
     :return: list of sync likelihood networks
     '''
-    tseries, fs = get_tseries_and_fs(f, band = band, series_idx = series_idx)
+    tseries, fs = get_tseries_and_fs(f, chan_ignore=chan_ignore, chan_keep=chan_keep, band = band, series_idx = series_idx)
     N, T = tseries.shape
 
     A_list = []
@@ -190,19 +213,28 @@ def plot_network(net):
 
 if __name__ == '__main__':
     #hardcoded paths as an example; should change these
-    filepath_ecog = 'C:/Users/billy/PycharmProjects/BrainNetworks/Time_Evolving_Controllability_EC_Data/dataSets_clean.mat'
-    fpath_131 = 'C:/Users/billy/PycharmProjects/BrainNetworks/Time_Evolving_Controllability_EC_Data/HUP131-short-ictal-block-1.mat'
-    fpath_084 = 'C:/Users/billy/PycharmProjects/BrainNetworks/Time_Evolving_Controllability_EC_Data/HUP084-short-ictal-block-1.mat'
-
-    f_ecog = h5py.File(filepath_ecog)
+    
+    jsonPath = '/Users/bscheid/Documents/LittLab/DATA/RNS_Data/Penn_Data/sz_annots/DATA.json'
+    with open(jsonPath) as json_data:
+        data = json.load(json_data)
+        
+        
+  #  filepath_ecog = 'C:/Users/billy/PycharmProjects/BrainNetworks/Time_Evolving_Controllability_EC_Data/dataSets_clean.mat'
+    fpath_131 = '/Users/bscheid/Documents/LittLab/DATA/RNS_Data/Penn_Data/sz_clips/HUP131/HUP131-short-ictal-block-1.mat'
+   # fpath_084 = 'C:/Users/billy/PycharmProjects/BrainNetworks/Time_Evolving_Controllability_EC_Data/HUP084-short-ictal-block-1.mat'
+    
+    patient_id = 'HUP131'
+    ignore_channels = data['PATIENTS'][patient_id]['IGNORE_ELECTRODES']
+   
+    #f_ecog = h5py.File(filepath_ecog)
     f_131 = h5py.File(fpath_131)
-    f_084 = h5py.File(fpath_084)
+    #f_084 = h5py.File(fpath_084)
 
-    A_list = construct_sync_likelihood_nets(0, f_ecog, series_idx=0)
+    A_list = construct_sync_likelihood_nets(f_131, chan_ignore=ignore_channels, series_idx=None)
 
     alpha, dt, totTime = 0.035, 1/512.0, 100
 
-    tseries, fs = get_tseries_and_fs(f_ecog, band = None, series_idx=0)
+    tseries, fs = get_tseries_and_fs(f_131, band = None, series_idx=0)
     nat_freqs = get_nat_freqs_from_tseries(tseries, fs)
 
     syncs, maxes, means, times = get_timescale_max_data(A_list, nat_freqs,alpha, dt, int(totTime / dt))
