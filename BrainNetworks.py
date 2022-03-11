@@ -159,7 +159,7 @@ def get_tseries_and_fs(f, band = [15,30], chan_ignore= None, chan_keep= None, se
             tseries = tseries[toKeep]
         
         tseries = preprocessed_tseries(tseries, fs, band=band)
-    return tseries, fs
+    return tseries, fs, channels
 
 
 def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=None,chan_keep=None, series_idx = None, name = ""):
@@ -174,7 +174,7 @@ def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=
     :param name: anything you would like to add to the saved filename
     :return: list of sync likelihood networks
     '''
-    tseries, fs = get_tseries_and_fs(f, chan_ignore=chan_ignore, chan_keep=chan_keep, band = band, series_idx = series_idx)
+    tseries, fs, channels = get_tseries_and_fs(f, chan_ignore=chan_ignore, chan_keep=chan_keep, band = band, series_idx = series_idx)
     N, T = tseries.shape
 
     A_list = []
@@ -182,14 +182,14 @@ def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=
         A = np.zeros((N, N))
         t0 = i * fs
         tf = (i+1) * fs
-        for j in range(N - 1):
+        for j in range(N): #TODO: why was this N-1?
             for k in range(j , N):
                 A[j][k] = synchronizationLikelihood(tseries[j,t0:tf], tseries[k,t0:tf], pRef = pRef)
                 A[k][j] = A[j][k]
                 print(i, j, k, A[j][k])
         A_list.append(A)
-    pk.dump(A_list, open("sync_likelihood_net_"+name+".pk", "wb")) #saves to pickle file.
-    return A_list
+    #pk.dump(A_list, open("sync_likelihood_net_"+name+".pk", "wb")) #saves to pickle file.
+    return A_list, channels
 
 def get_nat_freqs_from_tseries(tseries, Fs, look_frac = 1/3):
     '''
