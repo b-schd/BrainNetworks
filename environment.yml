@@ -13,4 +13,7 @@ dependencies:
   - numba
   - matplotlib
   - statsmodels
+  - pip
+  - pip:
+      - timebudget
 prefix: /Users/bscheid/opt/anaconda3/envs/sync-brain-networks

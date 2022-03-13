@@ -182,11 +182,11 @@ def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=
         A = np.zeros((N, N))
         t0 = i * fs
         tf = (i+1) * fs
+        print('T= %d, %s'%(i, name))
         for j in range(N): #TODO: why was this N-1?
             for k in range(j , N):
                 A[j][k] = synchronizationLikelihood(tseries[j,t0:tf], tseries[k,t0:tf], pRef = pRef)
                 A[k][j] = A[j][k]
-                print(i, j, k, A[j][k])
         A_list.append(A)
     #pk.dump(A_list, open("sync_likelihood_net_"+name+".pk", "wb")) #saves to pickle file.
     return A_list, channels
