@@ -9,7 +9,7 @@ Created on Mon Mar  7 13:41:26 2022
 #batch_run_sync_likelihood
 
 from BrainNetworks import construct_sync_likelihood_nets
-#from timebudget import timebudget
+from timebudget import timebudget
 from multiprocessing import Pool
 from functools import partial
 from scipy.io import savemat
@@ -29,7 +29,7 @@ def likelihood_wrapper(fpath, chan_ignore, outputmat, band):
             {bandname(band): A_list, 'channels': channels})
     return A_list
     
-
+@timebudget
 def run_in_parallel(fpath, bands, chan_ignore, outputmat):
     pool = Pool(len(bands)) #processes=len(bands))
     N = pool.map(partial(likelihood_wrapper,fpath, chan_ignore, outputmat), bands)
