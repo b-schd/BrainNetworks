@@ -45,7 +45,7 @@ def getDataFilePaths(data_config, ptID, path_prefix = None):
     fnames = [data_config['PATIENTS'][ptID]['Events']['Ictal'][evt]['FILE'] for evt in evt_list]
     
     if path_prefix:
-        fnames = [os.path.join(path_prefix, ptID, f) for f in fnames]
+        fnames = [os.path.join(path_prefix, ptID.split('_')[0], f) for f in fnames]
     
     return fnames
 
