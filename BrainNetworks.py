@@ -10,7 +10,7 @@ import cmath
 import matplotlib.pyplot as plt
 from scipy.signal.windows import blackmanharris
 from parabolic import parabolic
-from scipy.signal import butter,lfilter
+from scipy.signal import butter,lfilter, filtfilt
 import AnalysisAndPlots as aap
 
 def Kura(init, t, A, w_nat, a):
@@ -73,12 +73,12 @@ def freq_from_fft(sig, fs): #source: https://gist.github.com/jgomezdans/434642/8
     # Convert to equivalent frequency
     return fs * true_i / len(windowed)
 
-def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=4):
     nyq = 0.5 * fs
     low = lowcut / nyq
     high = highcut / nyq
     b, a = butter(order, [low, high], btype='band')
-    y = lfilter(b, a, data)
+    y = filtfilt(b, a, data)
     return y
 
 
@@ -159,7 +159,7 @@ def get_tseries_and_fs(f, band = [15,30], chan_ignore= None, chan_keep= None, se
             tseries = tseries[toKeep]
         
         tseries = preprocessed_tseries(tseries, fs, band=band)
-    return tseries, fs, channels
+    return tseries, fs, toKeep
 
 
 def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=None,chan_keep=None, series_idx = None, name = ""):

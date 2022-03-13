@@ -55,7 +55,7 @@ def bandname(band):
     elif band == [15,30]:
         name = 'adj_beta'
     elif band == [30,50]:
-        name = 'ladj_owgamma'
+        name = 'adj_lowgamma'
     elif band == [80,100]:
         name = 'adj_highgamma'
     else:
@@ -104,7 +104,7 @@ if __name__ == '__main__':
         
         outputmat = os.path.join(ptOutPath, '_'.join(matname))
 
-       # A_list = likelihood_wrapper(fpaths[0], chan_ignore, outputmat, bands[0])
+       # A_list = likelihood_wrapper(fpaths[0], chan_ignore, outputmat, bands[2])
         A_lists = run_in_parallel(fpaths[0], bands, chan_ignore, outputmat)
         
         
