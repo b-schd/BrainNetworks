@@ -96,7 +96,7 @@ if __name__ == '__main__':
         # with h5py.File(fpaths[0], 'r') as f:
         #     A_list = construct_sync_likelihood_nets(f, band=bands[0], chan_ignore=chan_ignore)
         
-        ptOutPath = os.path.join(out_path, ptID) 
+        ptOutPath = os.path.join(out_path, ptID.split('_')[0]) 
         os.makedirs(ptOutPath, exist_ok=True)
         
         matname = fpaths[0].split('/')[-1][:-4].split('-')
