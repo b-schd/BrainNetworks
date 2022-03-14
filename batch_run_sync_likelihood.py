@@ -8,36 +8,46 @@ Created on Mon Mar  7 13:41:26 2022
 
 #batch_run_sync_likelihood
 
-from BrainNetworks import construct_sync_likelihood_nets
+from BrainNetworks import construct_sync_likelihood_nets, synchronizability
 from timebudget import timebudget
 from multiprocessing import Pool
 from functools import partial
-from scipy.io import savemat
+from scipy.io import savemat, loadmat
+import numpy as np
 import h5py
 import sys
 import json
 import os
 
 
-def likelihood_wrapper(fpath, chan_ignore, outputmat, band):
+def likelihood_wrapper(fpath, chan_ignore, outputmat, pRef, band):
     print(band)
-    with h5py.File(fpath, 'r') as f:
-        print(f.filename)
-        A_list, channels = construct_sync_likelihood_nets(f, band=band, chan_ignore=chan_ignore)
     
-    savemat(outputmat+'_'+bandname(band)+'.mat',
-            {bandname(band): A_list, 'channels': channels})
+    try:
+        f = loadmat(fpath)        
+    except NotImplementedError:
+        f = h5py.File(fpath)
+        print(f.filename)            
+    except:
+        ValueError('could not read at all...')
+    
+    A_list, channels = construct_sync_likelihood_nets(f, band=band, pRef=pRef, chan_ignore=chan_ignore)
+    syn = [synchronizability(A_list[i,:,:]) for i in range(A_list.shape[0])]
+    
+    savemat(outputmat+'_pRef_'+pRef+'_adj_'+bandname(band)+'.mat',
+            {'adj_'+bandname(band): A_list, 'channels': channels,
+             'syn_'+bandname(band): np.transpose(syn)})
+        
     return A_list
     
 @timebudget
-def run_in_parallel(fpath, bands, chan_ignore, outputmat):
+def run_in_parallel(fpath, bands, chan_ignore, outputmat, pRef):
     pool = Pool(len(bands)) #processes=len(bands))
-    N = pool.map(partial(likelihood_wrapper,fpath, chan_ignore, outputmat), bands)
+    N = pool.map(partial(likelihood_wrapper,fpath, chan_ignore, outputmat, pRef), bands)
     # pool.close()
     # pool.join()
     
     return N
-
 
 def getDataFilePaths(data_config, ptID, path_prefix = None):
     
@@ -45,21 +55,24 @@ def getDataFilePaths(data_config, ptID, path_prefix = None):
     fnames = [data_config['PATIENTS'][ptID]['Events']['Ictal'][evt]['FILE'] for evt in evt_list]
     
     if path_prefix:
-        fnames = [os.path.join(path_prefix, ptID.split('_')[0], f) for f in fnames]
+        fnames_ictal = [os.path.join(path_prefix, ptID.split('_')[0], f) for f in fnames]
     
-    return fnames
+    fnames_preictal = [s.replace('ictal', 'preictal') for s in fnames]
+
+    
+    return fnames_ictal, fnames_preictal
 
 def bandname(band):
     if band == [5,15]:
-        name = 'adj_alphatheta'
+        name = 'alphatheta'
     elif band == [15,30]:
-        name = 'adj_beta'
+        name = 'beta'
     elif band == [30,50]:
-        name = 'adj_lowgamma'
+        name = 'lowgamma'
     elif band == [80,100]:
-        name = 'adj_highgamma'
+        name = 'highgamma'
     else:
-        name = 'adj_%d-%d'%(band[0], band[1])
+        name = '%d-%d'%(band[0], band[1])
 
     return name
     
@@ -76,7 +89,8 @@ if __name__ == '__main__':
     
     dir_path = data_config['DIR_PATH']
     out_path = data_config['OUTPUT_PATH']
-    bands = [[5,15], [15,30],[30,50], [80,100]]
+    bands = [[5,15],[15,30],[30,50],[80,100]]
+    pRef = 0.5; 
 
 
     # Default is to create networks from all patients
@@ -90,22 +104,28 @@ if __name__ == '__main__':
 
     for ptID in ptList:
         print(ptID)
-        fpaths = getDataFilePaths(data_config, ptID, dir_path)
+        fpaths_ictal, fpaths_preictal = getDataFilePaths(data_config, ptID, dir_path)
         chan_ignore= data_config['PATIENTS'][ptID]['IGNORE_ELECTRODES']
-        
-        # with h5py.File(fpaths[0], 'r') as f:
-        #     A_list = construct_sync_likelihood_nets(f, band=bands[0], chan_ignore=chan_ignore)
         
         ptOutPath = os.path.join(out_path, ptID.split('_')[0]) 
         os.makedirs(ptOutPath, exist_ok=True)
         
-        matname = fpaths[0].split('/')[-1][:-4].split('-')
-        matname.insert(1, 'syncLikelihood')
+        # ICTAL
+        matname_ictal = fpaths_ictal[0].split('/')[-1][:-4].split('-')
+        matname_ictal.insert(1, 'syncLikelihood')
+        outputmat_ictal = os.path.join(ptOutPath, '_'.join(matname_ictal))
+        A_lists = run_in_parallel(fpaths_ictal[0], bands, chan_ignore, outputmat_ictal, pRef)
         
-        outputmat = os.path.join(ptOutPath, '_'.join(matname))
+        # PREICTAL
+        matname_preictal = fpaths_preictal[0].split('/')[-1][:-4].split('-')
+        matname_preictal.insert(1, 'syncLikelihood')
+        outputmat_preictal = os.path.join(ptOutPath, '_'.join(matname_preictal))
+        A_lists = run_in_parallel(fpaths_preictal[0], bands, chan_ignore, outputmat_preictal, pRef)
+        
+        
+        #A_list = likelihood_wrapper(fpaths[0], chan_ignore, outputmat, bands[2])
 
-       # A_list = likelihood_wrapper(fpaths[0], chan_ignore, outputmat, bands[2])
-        A_lists = run_in_parallel(fpaths[0], bands, chan_ignore, outputmat)
+        
         
         
 

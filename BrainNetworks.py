@@ -4,6 +4,8 @@ import h5py
 from scipy.integrate import odeint
 import scipy as sp
 import numpy as np
+import sys
+import os
 import json
 from features import synchronizationLikelihood
 import cmath
@@ -110,8 +112,13 @@ def get_timescale_max_data(A_list, nat_freqs, alpha, dt, steps):
     return np.array(syncs), np.array(maxes), np.array(means), np.array(times)
 
 def cell_strings_from_hdf5(f, key):
-    ref = f[key][:]
-    strlist = [u''.join(chr(c) for c in f[ref[0][obj_ref]]) for obj_ref in range(ref.shape[1])] 
+    try:
+        ref = f[key][:]
+        strlist = [u''.join(chr(c) for c in f[ref[0][obj_ref]]) for obj_ref in range(ref.shape[1])] 
+    
+    except:
+        strlist = [f[key][x][0][0] for x in range(f[key].shape[0])]
+    
     return strlist
 
 
@@ -146,6 +153,9 @@ def get_tseries_and_fs(f, band = [15,30], chan_ignore= None, chan_keep= None, se
         fs = int(f['Fs'][()][0][0])
         tseries = f['evData'][()].T
         
+        if tseries.shape[0] > tseries.shape[1]:
+            tseries = tseries.T
+        
         if chan_ignore:
             channels = cell_strings_from_hdf5(f, 'channels')
             toKeep = [i not in chan_ignore for i in channels]
@@ -159,7 +169,7 @@ def get_tseries_and_fs(f, band = [15,30], chan_ignore= None, chan_keep= None, se
             tseries = tseries[toKeep]
         
         tseries = preprocessed_tseries(tseries, fs, band=band)
-    return tseries, fs, toKeep
+    return tseries, fs, [channels[i] for i in np.where(toKeep)[0]]
 
 
 def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=None,chan_keep=None, series_idx = None, name = ""):
@@ -187,6 +197,7 @@ def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=
             for k in range(j , N):
                 A[j][k] = synchronizationLikelihood(tseries[j,t0:tf], tseries[k,t0:tf], pRef = pRef)
                 A[k][j] = A[j][k]
+                print(i,j,k,A[j][k])
         A_list.append(A)
     #pk.dump(A_list, open("sync_likelihood_net_"+name+".pk", "wb")) #saves to pickle file.
     return A_list, channels
@@ -213,32 +224,50 @@ def plot_network(net):
 
 if __name__ == '__main__':
     #hardcoded paths as an example; should change these
-    
-    jsonPath = '/Users/bscheid/Documents/LittLab/DATA/RNS_Data/Penn_Data/sz_annots/DATA.json'
-    with open(jsonPath) as json_data:
-        data = json.load(json_data)
-        
-        
-  #  filepath_ecog = 'C:/Users/billy/PycharmProjects/BrainNetworks/Time_Evolving_Controllability_EC_Data/dataSets_clean.mat'
-    fpath_131 = '/Users/bscheid/Documents/LittLab/DATA/RNS_Data/Penn_Data/sz_clips/HUP131/HUP131-short-ictal-block-1.mat'
-   # fpath_084 = 'C:/Users/billy/PycharmProjects/BrainNetworks/Time_Evolving_Controllability_EC_Data/HUP084-short-ictal-block-1.mat'
-    
-    patient_id = 'HUP131'
-    ignore_channels = data['PATIENTS'][patient_id]['IGNORE_ELECTRODES']
    
-    #f_ecog = h5py.File(filepath_ecog)
-    f_131 = h5py.File(fpath_131)
-    #f_084 = h5py.File(fpath_084)
+    sysPT = sys.argv[1:] # Input patient ID, otherwise all patients will run
 
-    A_list = construct_sync_likelihood_nets(f_131, chan_ignore=ignore_channels, series_idx=None)
+    with open('DATA_config.json') as json_data:
+       data_config = json.load(json_data)
+        
+    
+    dir_path = data_config['DIR_PATH']
+    out_path = data_config['OUTPUT_PATH']
+    bands = [[5,15],[15,30],[30,50],[80,100]]
 
-    alpha, dt, totTime = 0.035, 1/512.0, 100
 
-    tseries, fs = get_tseries_and_fs(f_131, band = None, series_idx=0)
-    nat_freqs = get_nat_freqs_from_tseries(tseries, fs)
+    # Default is to create networks from all patients
+    if sysPT:
+        print(sysPT)
+        ptList = sysPT
+    else:
+        print('Creating networks for all patients in DATA_config')
+        ptList = list(data_config['PATIENTS'].keys())
+        
 
-    syncs, maxes, means, times = get_timescale_max_data(A_list, nat_freqs,alpha, dt, int(totTime / dt))
-    num_networks = len(A_list)
-    aap.make_plots(num_networks, syncs, maxes, means, times, nat_freqs)
+    ptID = 'HUP131'
+    fpath = '/path/to/ptID'
+    chan_ignore= data_config['PATIENTS'][ptID]['IGNORE_ELECTRODES']
+
+    ptOutPath = os.path.join(out_path, ptID.split('_')[0]) 
+    os.makedirs(ptOutPath, exist_ok=True)
+    
+    matname = fpath.split('/')[-1][:-4].split('-')
+    matname.insert(1, 'syncLikelihood')
+    
+    outputmat = os.path.join(ptOutPath, '_'.join(matname))
+    
+    f = h5py.File(fpath[0])
+    
+    A_list = construct_sync_likelihood_nets(f, band= bands[3], pRef= 0.5, chan_ignore=chan_ignore, series_idx=None)
+
+    # alpha, dt, totTime = 0.035, 1/512.0, 100
+
+    # tseries, fs = get_tseries_and_fs(f_131, band = None, series_idx=0)
+    # nat_freqs = get_nat_freqs_from_tseries(tseries, fs)
+
+    # syncs, maxes, means, times = get_timescale_max_data(A_list, nat_freqs,alpha, dt, int(totTime / dt))
+    # num_networks = len(A_list)
+    # aap.make_plots(num_networks, syncs, maxes, means, times, nat_freqs)
 
 
