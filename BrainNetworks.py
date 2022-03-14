@@ -193,13 +193,12 @@ def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=
         t0 = i * fs
         tf = (i+1) * fs
         print('T= %d, band [%d - %d]'%(i, band[0], band[1]))
-        for j in range(N): #TODO: why was this N-1?
+        for j in range(N): 
             for k in range(j , N):
                 A[j][k] = synchronizationLikelihood(tseries[j,t0:tf], tseries[k,t0:tf], pRef = pRef)
                 A[k][j] = A[j][k]
-                print(i,j,k,A[j][k])
+        print('A[N-5,0]=%0.5f'%(A[N-5][0]))
         A_list.append(A)
-    #pk.dump(A_list, open("sync_likelihood_net_"+name+".pk", "wb")) #saves to pickle file.
     return A_list, channels
 
 def get_nat_freqs_from_tseries(tseries, Fs, look_frac = 1/3):
