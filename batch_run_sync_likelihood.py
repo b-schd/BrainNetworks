@@ -32,9 +32,9 @@ def likelihood_wrapper(fpath, chan_ignore, outputmat, pRef, band):
         ValueError('could not read at all...')
     
     A_list, channels = construct_sync_likelihood_nets(f, band=band, pRef=pRef, chan_ignore=chan_ignore)
-    syn = [synchronizability(A_list[i,:,:]) for i in range(A_list.shape[0])]
+    syn = [synchronizability(A_list[i]) for i in range(len(A_list))]
     
-    savemat(outputmat+'_pRef_'+pRef+'_adj_'+bandname(band)+'.mat',
+    savemat(outputmat+'_pRef_'+str(pRef).replace('.', '_')+'_adj_'+bandname(band)+'.mat',
             {'adj_'+bandname(band): A_list, 'channels': channels,
              'syn_'+bandname(band): np.transpose(syn)})
         
@@ -123,7 +123,7 @@ if __name__ == '__main__':
         A_lists = run_in_parallel(fpaths_preictal[0], bands, chan_ignore, outputmat_preictal, pRef)
         
         
-        #A_list = likelihood_wrapper(fpaths[0], chan_ignore, outputmat, bands[2])
+        #A_list = likelihood_wrapper(fpaths_ictal[0], chan_ignore, outputmat_ictal, pRef, bands[2])
 
         
         
