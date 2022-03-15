@@ -51,17 +51,12 @@ def run_in_parallel(fpath, bands, chan_ignore, outputmat, pRef):
     return N
 
 def getDataFilePaths(data_config, ptID, path_prefix = None):
-    
     evt_list = list(data_config['PATIENTS'][ptID]['Events']['Ictal'].keys())
     fnames = [data_config['PATIENTS'][ptID]['Events']['Ictal'][evt]['FILE'] for evt in evt_list]
-    
     if path_prefix:
-        fnames_ictal = [os.path.join(path_prefix, ptID.split('_')[0], f) for f in fnames]
-    
-    fnames_preictal = [s.replace('ictal', 'preictal') for s in fnames]
-
-    
-    return fnames_ictal, fnames_preictal
+        fnames_ictal = [os.path.join(path_prefix, ptID.split('_')[0], f) for f in fnames]   
+    fnames_preictal = [s.replace('ictal', 'preictal') for s in fnames_ictal]
+    return (fnames_ictal, fnames_preictal)
 
 def bandname(band):
     if band == [5,15]:
