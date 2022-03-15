@@ -29,6 +29,7 @@ def likelihood_wrapper(fpath, chan_ignore, outputmat, pRef, band):
         f = h5py.File(fpath)
         print(f.filename)            
     except:
+        print('Error reading f at %s'%fpath)
         ValueError('could not read at all...')
     
     A_list, channels = construct_sync_likelihood_nets(f, band=band, pRef=pRef, chan_ignore=chan_ignore)
