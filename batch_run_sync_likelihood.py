@@ -79,8 +79,6 @@ def bandname(band):
 if __name__ == '__main__':
     
     sysPT = sys.argv[1] # Input patient ID, otherwise all patients will run
-    syspRef = float(sys.argv[2])  # Input pRef number
-
 
     with open('DATA_gridStrip.json') as json_data:
         data_config = json.load(json_data)
@@ -90,8 +88,8 @@ if __name__ == '__main__':
     out_path = data_config['OUTPUT_PATH']
     bands = [[5,15],[15,30],[30,50],[80,100]]
     
-    if syspRef:
-        pRef = syspRef
+    if len(sys.argv) > 2:
+        pRef = float(sys.argv[2]) 
     else:
         pRef = 0.5
     
@@ -129,7 +127,7 @@ if __name__ == '__main__':
         matname_preictal = fpaths_preictal[0].split('/')[-1][:-4].split('-')
         matname_preictal.insert(1, 'syncLikelihood')
         outputmat_preictal = os.path.join(ptOutPath, '-'.join(matname_preictal))
-       # A_lists = run_in_parallel(fpaths_preictal[0], bands, chan_ignore, chan_keep, outputmat_preictal, pRef)
+        A_lists = run_in_parallel(fpaths_preictal[0], bands, chan_ignore, chan_keep, outputmat_preictal, pRef)
         
         
         #A_list = likelihood_wrapper(fpaths_ictal[0], chan_ignore, chan_keep, outputmat_ictal, pRef, bands[2])
