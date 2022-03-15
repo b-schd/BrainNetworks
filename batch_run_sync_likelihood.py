@@ -113,6 +113,7 @@ if __name__ == '__main__':
             chan_keep = data_config['PATIENTS'][ptID]['CLEAN_GRID_NAMES']
         else:
             chan_ignore = data_config['PATIENTS'][ptID]['IGNORE_ELECTRODES']
+            chan_keep = None
             
         
         ptOutPath = os.path.join(out_path, ptID.split('_')[0]) 
