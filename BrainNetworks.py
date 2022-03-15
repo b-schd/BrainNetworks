@@ -111,13 +111,17 @@ def get_timescale_max_data(A_list, nat_freqs, alpha, dt, steps):
         maxes.append(max)
     return np.array(syncs), np.array(maxes), np.array(means), np.array(times)
 
-def cell_strings_from_hdf5(f, key):
-    try:
+def cell_strings_from_file(f, key):
+    try: # Case where file is in h5 format
         ref = f[key][:]
         strlist = [u''.join(chr(c) for c in f[ref[0][obj_ref]]) for obj_ref in range(ref.shape[1])] 
     
     except:
         strlist = [f[key][x][0][0] for x in range(f[key].shape[0])]
+        
+    # Clean filenames when decorated with "EEG and "Ref"
+    strlist = [x.replace('EEG ','').replace('-Ref','').replace(' 0','').replace(' ','')
+               for x in strlist]
     
     return strlist
 
@@ -145,7 +149,7 @@ def get_tseries_and_fs(f, band = [15,30], chan_ignore= None, chan_keep= None, se
         fs = int(f[refs_sample_freq[series_idx][0]][()][0][0])
         
         tseries = f[refs[series_idx][0]][()].T
-        channels = cell_strings_from_hdf5(f, 'channels')
+        channels = cell_strings_from_file(f, 'channels')
         
         tseries = preprocessed_tseries(tseries, fs, band = band)
         return tseries, fs
@@ -157,13 +161,13 @@ def get_tseries_and_fs(f, band = [15,30], chan_ignore= None, chan_keep= None, se
             tseries = tseries.T
         
         if chan_ignore:
-            channels = cell_strings_from_hdf5(f, 'channels')
+            channels = cell_strings_from_file(f, 'channels')
             toKeep = [i not in chan_ignore for i in channels]
             # TODO: make sure channels in EEG files match channel name in data file
             tseries = tseries[toKeep]
             
         elif chan_keep:
-            channels = cell_strings_from_hdf5(f, 'channels')
+            channels = cell_strings_from_file(f, 'channels')
             toKeep = [i in chan_keep for i in channels]
             # TODO: make sure channels in EEG files match channel name in data file
             tseries = tseries[toKeep]
