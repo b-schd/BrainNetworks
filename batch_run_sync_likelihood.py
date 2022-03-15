@@ -14,6 +14,7 @@ from multiprocessing import Pool
 from functools import partial
 from scipy.io import savemat, loadmat
 import numpy as np
+import argparse
 import h5py
 import sys
 import json
@@ -78,26 +79,26 @@ def bandname(band):
 
 if __name__ == '__main__':
     
-    sysPT = sys.argv[1] # Input patient ID, otherwise all patients will run
-
-    with open('DATA_gridStrip.json') as json_data:
-        data_config = json.load(json_data)
-        
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sysPT', nargs='?', default=None)
+    parser.add_argument('--pref', type=float, default=0.5)
+    parser.add_argument('--config', default='DATA_config.json', help='path to config file')
+    args = parser.parse_args()
     
+
+    with open(args.config) as json_data:
+        data_config = json.load(json_data)
+         
     dir_path = data_config['DIR_PATH']
     out_path = data_config['OUTPUT_PATH']
     bands = [[5,15],[15,30],[30,50],[80,100]]
-    
-    if len(sys.argv) > 2:
-        pRef = float(sys.argv[2]) 
-    else:
-        pRef = 0.5
+    pRef = args.pref
     
     print('Using pRef= %0.2f'%(pRef))
 
     # Default is to create networks from all patients
-    if sysPT:
-        ptList = [sysPT]
+    if args.sysPT:
+        ptList = [args.sysPT]
     else:
         print('Creating networks for all patients in DATA_config')
         ptList = list(data_config['PATIENTS'].keys())
