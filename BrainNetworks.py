@@ -160,16 +160,16 @@ def get_tseries_and_fs(f, band = [15,30], chan_ignore= None, chan_keep= None, se
         if tseries.shape[0] > tseries.shape[1]:
             tseries = tseries.T
         
+        channels = cell_strings_from_file(f, 'channels')
+       # TODO: make sure channels in EEG files match channel name in data file
+        assert len(channels) == tseries.shape[0], "mismatch # channels and tseries dimension"
+        
         if chan_ignore:
-            channels = cell_strings_from_file(f, 'channels')
             toKeep = [i not in chan_ignore for i in channels]
-            # TODO: make sure channels in EEG files match channel name in data file
             tseries = tseries[toKeep]
             
         elif chan_keep:
-            channels = cell_strings_from_file(f, 'channels')
             toKeep = [i in chan_keep for i in channels]
-            # TODO: make sure channels in EEG files match channel name in data file
             tseries = tseries[toKeep]
         
         tseries = preprocessed_tseries(tseries, fs, band=band)

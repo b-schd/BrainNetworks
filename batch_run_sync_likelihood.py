@@ -38,20 +38,26 @@ def likelihood_wrapper(fpath, chan_ignore, chan_keep, outputmat, pRef, band):
                                                       chan_keep = chan_keep)
     syn = [synchronizability(A_list[i]) for i in range(len(A_list))]
     
-    savemat(outputmat+'-pRef-'+str(pRef).replace('.', '_')+'-adj_'+bandname(band)+'.mat',
-            {'adj-'+bandname(band): A_list, 'channels': channels,
-             'syn-'+bandname(band): np.transpose(syn)})
-        
-    return A_list
+    return A_list, syn, channels
     
 @timebudget
 def run_in_parallel(fpath, bands, chan_ignore, chan_keep, outputmat, pRef):
     pool = Pool(len(bands)) #processes=len(bands))
-    N = pool.map(partial(likelihood_wrapper,fpath, chan_ignore, chan_keep, outputmat, pRef), bands)
+    A_lists = pool.map(partial(likelihood_wrapper,fpath, chan_ignore, chan_keep, outputmat, pRef), bands)
     # pool.close()
-    # pool.join()
+    #pool.join()
     
-    return N
+    bname = ['adj_'+bandname(i) for i in bands]
+    sname = ['syn_'+bandname(i) for i in bands]
+    
+    savedict = dict(zip(bname, [A_lists[i][0] for i in range(len(bands))]))
+    savedict.update(dict(zip(sname, [A_lists[i][1] for i in range(len(bands))])))
+    savedict.update({'channels': A_lists[0][2]})
+        
+    savemat(outputmat+'-pRef-'+str(pRef).replace('.', '_')+'-multiband.mat', savedict)
+    
+    
+    return A_lists
 
 def getDataFilePaths(data_config, ptID, path_prefix = None):
     evt_list = list(data_config['PATIENTS'][ptID]['Events']['Ictal'].keys())
@@ -71,7 +77,7 @@ def bandname(band):
     elif band == [80,100]:
         name = 'highgamma'
     else:
-        name = '%d-%d'%(band[0], band[1])
+        name = '%d_%d'%(band[0], band[1])
 
     return name
     
@@ -120,16 +126,18 @@ if __name__ == '__main__':
         os.makedirs(ptOutPath, exist_ok=True)
         
         # ICTAL
-        matname_ictal = fpaths_ictal[0].split('/')[-1][:-4].split('-')
-        matname_ictal.insert(1, 'syncLikelihood')
-        outputmat_ictal = os.path.join(ptOutPath, '-'.join(matname_ictal))
-        A_lists = run_in_parallel(fpaths_ictal[0], bands, chan_ignore, chan_keep, outputmat_ictal, pRef)
+        for i_pth in range(len(fpaths_ictal)):
+            matname_ictal = fpaths_ictal[i_pth].split('/')[-1][:-4].split('-')
+            matname_ictal.insert(1, 'syncLikelihood')
+            outputmat_ictal = os.path.join(ptOutPath, '-'.join(matname_ictal))
+            A_lists = run_in_parallel(fpaths_ictal[i_pth], bands, chan_ignore, chan_keep, outputmat_ictal, pRef)
         
         # PREICTAL
-        matname_preictal = fpaths_preictal[0].split('/')[-1][:-4].split('-')
-        matname_preictal.insert(1, 'syncLikelihood')
-        outputmat_preictal = os.path.join(ptOutPath, '-'.join(matname_preictal))
-        A_lists = run_in_parallel(fpaths_preictal[0], bands, chan_ignore, chan_keep, outputmat_preictal, pRef)
+        for i_pth in range(len(fpaths_preictal)):
+            matname_preictal = fpaths_preictal[i_pth].split('/')[-1][:-4].split('-')
+            matname_preictal.insert(1, 'syncLikelihood')
+            outputmat_preictal = os.path.join(ptOutPath, '-'.join(matname_preictal))
+            A_lists = run_in_parallel(fpaths_preictal[i_pth], bands, chan_ignore, chan_keep, outputmat_preictal, pRef)
         
         
         #A_list = likelihood_wrapper(fpaths_ictal[0], chan_ignore, chan_keep, outputmat_ictal, pRef, bands[2])
