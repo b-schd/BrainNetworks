@@ -86,9 +86,10 @@ def bandname(band):
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('sysPT', nargs='?', default=None)
+    parser.add_argument('sysPT', nargs='?', default=None, help='Patient ID (e.g. HUP108)')
     parser.add_argument('--pref', type=float, default=0.5)
     parser.add_argument('--config', default='DATA_config.json', help='path to config file')
+    parser.add_argument('--fpath', default= None)
     args = parser.parse_args()
     
 
@@ -125,12 +126,23 @@ if __name__ == '__main__':
         ptOutPath = os.path.join(out_path, ptID.split('_')[0]) 
         os.makedirs(ptOutPath, exist_ok=True)
         
+        if args.fpath:
+            matname= args.fpath.split('/')[-1][:-4].split('-')
+            matname.insert(1, 'syncLikelihood')
+            outputmat = os.path.join(ptOutPath, '-'.join(matname))
+            A_lists = run_in_parallel(args.fpath, bands, chan_ignore, chan_keep, outputmat, pRef)
+            #A_list = likelihood_wrapper(args.fpath, chan_ignore, chan_keep, outputmat, pRef, bands[2])
+
+            print(args.fpath)
+            break
+            
+        
         # ICTAL
         for i_pth in range(len(fpaths_ictal)):
             matname_ictal = fpaths_ictal[i_pth].split('/')[-1][:-4].split('-')
             matname_ictal.insert(1, 'syncLikelihood')
             outputmat_ictal = os.path.join(ptOutPath, '-'.join(matname_ictal))
-            A_lists = run_in_parallel(fpaths_ictal[i_pth], bands, chan_ignore, chan_keep, outputmat_ictal, pRef)
+            #A_lists = run_in_parallel(fpaths_ictal[i_pth], bands, chan_ignore, chan_keep, outputmat_ictal, pRef)
         
         # PREICTAL
         for i_pth in range(len(fpaths_preictal)):

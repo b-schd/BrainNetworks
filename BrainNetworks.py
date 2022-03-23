@@ -196,7 +196,7 @@ def construct_sync_likelihood_nets(f, band = [15, 30], pRef = 0.05, chan_ignore=
         A = np.zeros((N, N))
         t0 = i * fs
         tf = (i+1) * fs
-        print('T= %d, band [%d - %d]'%(i, band[0], band[1]))
+        print('T= %d/%d, band [%d - %d]'%(i, T//fs, band[0], band[1]))
         for j in range(N): 
             for k in range(j , N):
                 A[j][k] = synchronizationLikelihood(tseries[j,t0:tf], tseries[k,t0:tf], pRef = pRef)
