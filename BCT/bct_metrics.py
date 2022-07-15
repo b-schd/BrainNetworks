@@ -33,6 +33,8 @@ def calcNodalBCTMets(folderPath, netFuncs, funcNames, ptID, nNets = None):
 
     ID, cliptype, sznum, band_nm, data_length = [], [], [], [], []
     metricArrays = [[] for i in range(0,len(funcNames))]
+    
+    assert len(netPaths) > 0
 
     
     for i_net in range(0, np.min((nNets,len(netPaths)))): #Iterate through networks
