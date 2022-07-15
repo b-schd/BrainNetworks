@@ -30,33 +30,24 @@ def calcNodalBCTMets(folderPath, netFuncs, funcNames, ptID, nNets = None):
     netPaths = glob.glob(pth.join(folderPath, ptID, '%s*ictal*multiband.mat'%(ptID)));
     m = [re.search("-([pre]*ictal)-block-(\d*)", net).groups() for net in netPaths];
     
-
     ID, cliptype, sznum, band_nm, data_length = [], [], [], [], []
     metricArrays = [[] for i in range(0,len(funcNames))]
     
     assert len(netPaths) > 0
-
     
     for i_net in range(0, np.min((nNets,len(netPaths)))): #Iterate through networks
         nets = loadmat(netPaths[i_net])
         
         print('loading adjacency matrix from %s'%pth.basename(netPaths[i_net]))
         
-        for band in bands:              # Iterate through bands
-            adjs = nets.get('adj_'+band)
-            
-            if len(np.unique(adjs.shape[0:2])) > 1:
-                funcDim = 1
-                data_length.append(adjs.shape[0])
-            else: 
-                funcDim = 0
-                data_length.append(adjs.shape[2])
+        for band in bands:  # Iterate through bands
+            adjs = _timeDimFirst( nets.get('adj_'+band) )
                         
             ID.append(ptID)
             cliptype.append(m[i_net][0])
             sznum.append(m[i_net][1])
             band_nm.append(band)
-      
+            data_length.append(adjs.shape[0])
             
             for i_f in range(0,len(funcNames)):
                 func = netFuncs[i_f]
@@ -67,6 +58,16 @@ def calcNodalBCTMets(folderPath, netFuncs, funcNames, ptID, nNets = None):
                           columns = ["ID", "type", "sznum", "band", "data_length"]+ funcNames)
            
     return df
+
+def _timeDimFirst(A3D):
+    # Find time dimension (unique dimension size), and place it first
+    
+    assert len(A3D.shape) == 3
+    
+    (unq, u_idx, u_ct) = np.unique(A3D.shape, return_index = True, return_counts = True)
+    t_idx = u_idx[u_ct == 1]; # index for time
+    
+    return np.moveaxis(A3D, t_idx, 0)
     
 def getModularity(A, niter=100):
     
@@ -117,7 +118,7 @@ if __name__ == '__main__':
        path_config = json.load(json_data)
     
     
-    folderPath = path_config['COHERENCE_NETS']
+    folderPath = path_config['SYNC_NETS']
     ptIDS = [pth.basename(x) for x in glob.glob(pth.join(folderPath, '[!.]*'))]
     
     netFuncs = [bct.strengths_und, bct.core_periphery_dir, bct.betweenness_wei, getModularity]
