@@ -16,4 +16,5 @@ dependencies:
   - pip
   - pip:
       - timebudget
+      - bctpy
 prefix: /Users/bscheid/opt/anaconda3/envs/sync-brain-networks
