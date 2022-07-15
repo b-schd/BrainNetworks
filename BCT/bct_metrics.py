@@ -12,6 +12,7 @@ import bct
 import os.path as pth
 import glob
 import re
+import json
 from scipy.io import savemat, loadmat
 import numpy as np
 import pandas as pd
@@ -110,8 +111,11 @@ if __name__ == '__main__':
     # Define functions to run
     # save network files
     
+    with open('../BrainNetworks_config.json') as json_data:
+       path_config = json.load(json_data)
     
-    folderPath = '/Volumes/public/USERS/bscheid/pb17_sync_proj/Data_out/'
+    
+    folderPath = path_config['COHERENCE_NETS']
     ptIDS = [pth.basename(x) for x in glob.glob(pth.join(folderPath, '[!.]*'))]
     
     netFuncs = [bct.strengths_und, bct.core_periphery_dir, bct.betweenness_wei, getModularity]
