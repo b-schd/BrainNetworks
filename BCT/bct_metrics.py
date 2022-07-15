@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from multiprocessing import Pool
+import sys
 
 
 
@@ -114,19 +115,21 @@ if __name__ == '__main__':
     # Define functions to run
     # save network files
     
+    netType = sys.argv[1] # COHERENCE_NETS or SYNC_NETS
+    ptID = sys.argv[2]    # e.g. HUP137
+    
     with open('../BrainNetworks_config.json') as json_data:
        path_config = json.load(json_data)
     
-    
-    folderPath = path_config['SYNC_NETS']
+    folderPath = path_config[netType]
     ptIDS = [pth.basename(x) for x in glob.glob(pth.join(folderPath, '[!.]*'))]
     
     netFuncs = [bct.strengths_und, bct.core_periphery_dir, bct.betweenness_wei, getModularity]
     funcNames = ['strength', 'core_periphery', 'betweeness_centrlity', 'modularity']
     
     
-    ptID = 'HUP137'
-    print(ptID)
+    print('%s, %s'%(ptID, netType))
+    
     metric_df = calcNodalBCTMets(folderPath, netFuncs, funcNames, ptID, nNets = 2)
     savemat(pth.join(folderPath, ptID,'%s-BCTmetrics.mat'%ptID), {'BCTmetrics': metric_df.to_dict("list")})
     metric_df.to_pickle(pth.join(folderPath, ptID,'%s-BCTmetrics.pkl'%ptID))
